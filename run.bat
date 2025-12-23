@@ -25,13 +25,27 @@ if errorlevel 1 (
         echo    (This requires Administrator privileges and may prompt for confirmation)
         echo.
 
-        REM Check where we are to find the script
+        REM Run installer and capture exit code
+        set INSTALL_EXIT_CODE=0
         if exist "backend\install_dependancies_for_windows.ps1" (
             powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
+            set INSTALL_EXIT_CODE=%errorlevel%
         ) else if exist "..\backend\install_dependancies_for_windows.ps1" (
             powershell -ExecutionPolicy Bypass -File ..\backend\install_dependancies_for_windows.ps1
+            set INSTALL_EXIT_CODE=%errorlevel%
         ) else (
             echo    ❌ Could not find installer script at backend\install_dependancies_for_windows.ps1
+            pause
+            exit /b 1
+        )
+
+        if errorlevel 1 (
+            echo.
+            echo    ⚠️  Installation script encountered errors.
+            echo    Please review the error messages above.
+            echo    You may need to run the installer manually or fix issues (like file locks) and reboot.
+            echo.
+            echo    Command: powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
             pause
             exit /b 1
         )

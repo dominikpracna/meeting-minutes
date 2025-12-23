@@ -27,6 +27,17 @@ impl DiarizationEngine {
         Ok(())
     }
 
+    // Smart loading: only load if not already loaded
+    pub async fn load_model_if_needed(&self, path: PathBuf) -> anyhow::Result<()> {
+        // Read lock first to check
+        if self.model.read().await.is_some() {
+            return Ok(());
+        }
+
+        // Load
+        self.load_model(path).await
+    }
+
     pub async fn process_segment(&self, audio_samples: &[f32]) -> anyhow::Result<usize> {
         let mut model_guard = self.model.write().await;
         if let Some(model) = model_guard.as_mut() {

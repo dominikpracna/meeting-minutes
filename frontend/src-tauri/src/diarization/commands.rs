@@ -45,11 +45,32 @@ pub async fn diarize_segment(
             return Ok(0); // No model, no speaker ID
         }
 
-        // Lazy load model if needed (this might be slow on first call)
-        // In a real implementation we should load it once.
-        // For now let's try to load it if not loaded.
-        // But load_model is async and takes &self (non-mut) but locks internal RwLock.
-        engine.load_model(model_path).await.map_err(|e| e.to_string())?;
+        // Lazy load model if not already loaded
+        // We check internal state indirectly or rely on engine to handle it gracefully.
+        // But engine.load_model overwrites.
+        // Let's add a check in engine (which we can't easily access from here without exposing a method)
+        // OR assume engine handles it.
+        // Ideally DiarizationEngine should have `ensure_model_loaded(path)`.
+        // For now, let's just load it. The engine logic locks write, so it's safe but slow if repeated.
+        // The optimization is to expose `is_model_loaded` in DiarizationEngine.
+
+        // Actually, DiarizationEngine implementation (in mod.rs) stores model in RwLock.
+        // I can just call load_model. To optimize, I should check first.
+        // But `DiarizationEngine` struct definition is public but fields are private/public?
+        // Let's just update load_model in mod.rs to be smart (I already did that? No, I implemented load_model to overwrite).
+        // Let's check mod.rs again.
+
+        // In mod.rs:
+        // pub async fn load_model(&self, path: PathBuf) -> anyhow::Result<()> {
+        //    let model = EmbeddingModel::new(&path)?;
+        //    *self.model.write().await = Some(model);
+        //    Ok(())
+        // }
+        // It always reloads.
+
+        // I should fix mod.rs to check first.
+
+        engine.load_model_if_needed(model_path).await.map_err(|e| e.to_string())?;
 
         let speaker_id = engine.process_segment(&audio_data).await.map_err(|e| e.to_string())?;
         Ok(speaker_id)
