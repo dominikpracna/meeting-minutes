@@ -12,14 +12,42 @@ REM Check if Rust/Cargo is installed
 where cargo >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo ❌ Error: Rust/Cargo is not installed or not in your PATH.
-    echo    You can try running the dependency installation script:
-    echo    powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
+    echo ❌ Rust/Cargo is NOT found in your PATH.
     echo.
-    echo    Or install Rust manually from https://rustup.rs/
-    echo    After installing, restart your terminal and try again.
-    pause
-    exit /b 1
+    echo    Meetily requires Rust, Node.js, and other dependencies to run.
+    echo    We can attempt to install them automatically using a PowerShell script.
+    echo.
+    set /p "INSTALL_DEPS=Would you like to install dependencies now? (Y/N): "
+
+    if /i "%INSTALL_DEPS%"=="Y" (
+        echo.
+        echo    🚀 Launching dependency installer...
+        echo    (This requires Administrator privileges and may prompt for confirmation)
+        echo.
+
+        REM Check where we are to find the script
+        if exist "backend\install_dependancies_for_windows.ps1" (
+            powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
+        ) else if exist "..\backend\install_dependancies_for_windows.ps1" (
+            powershell -ExecutionPolicy Bypass -File ..\backend\install_dependancies_for_windows.ps1
+        ) else (
+            echo    ❌ Could not find installer script at backend\install_dependancies_for_windows.ps1
+            pause
+            exit /b 1
+        )
+
+        echo.
+        echo    ✅ Installation attempt finished.
+        echo    ⚠️  IMPORTANT: You MUST restart your terminal/CMD window now to refresh environment variables.
+        echo    Please close this window and run 'run.bat' again.
+        pause
+        exit /b 0
+    ) else (
+        echo.
+        echo    ❌ Cannot proceed without Rust. Exiting.
+        pause
+        exit /b 1
+    )
 )
 
 REM Check if we are in the root directory and need to move to frontend
