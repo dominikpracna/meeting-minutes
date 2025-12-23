@@ -3,7 +3,7 @@ use crate::diarization::DiarizationEngine;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use lazy_static::lazy_static;
-use log::{info, error, warn};
+use log::{info, error};
 use reqwest::Client;
 use std::path::PathBuf;
 use futures_util::StreamExt;
@@ -31,14 +31,31 @@ pub async fn diarization_init() -> Result<(), String> {
 
 #[command]
 pub async fn diarize_segment(
-    _app: AppHandle,
-    _audio_data: Vec<f32>,
+    app: AppHandle,
+    audio_data: Vec<f32>,
     _segment_id: String
 ) -> Result<usize, String> {
-    // This is a placeholder for the actual logic.
-    // In a real flow, this would be called by the audio processing pipeline.
-    // For now, we just return a dummy speaker ID if engine not ready.
-    Ok(0)
+    let guard = DIARIZATION_ENGINE.lock().await;
+    if let Some(engine) = guard.as_ref() {
+        // Ensure model is loaded
+        let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+        let model_path = app_data_dir.join("models").join("diarization").join(MODEL_FILENAME);
+
+        if !model_path.exists() {
+            return Ok(0); // No model, no speaker ID
+        }
+
+        // Lazy load model if needed (this might be slow on first call)
+        // In a real implementation we should load it once.
+        // For now let's try to load it if not loaded.
+        // But load_model is async and takes &self (non-mut) but locks internal RwLock.
+        engine.load_model(model_path).await.map_err(|e| e.to_string())?;
+
+        let speaker_id = engine.process_segment(&audio_data).await.map_err(|e| e.to_string())?;
+        Ok(speaker_id)
+    } else {
+        Err("Diarization engine not initialized".to_string())
+    }
 }
 
 #[command]
