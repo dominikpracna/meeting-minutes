@@ -20,32 +20,24 @@ if exist "frontend\package.json" (
 
 REM Check if pnpm is installed
 where pnpm >nul 2>&1
-if not errorlevel 1 goto :found_pnpm
+if %errorlevel% equ 0 (
+    echo    Using pnpm...
+    call pnpm install
+    call pnpm run tauri:dev
+) else (
+    REM Fallback to npm
+    where npm >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo    Using npm...
+        call npm install
+        call npm run tauri:dev
+    ) else (
+        echo    ❌ Error: Node.js (npm/pnpm) is not installed or not in PATH.
+        pause
+        exit /b 1
+    )
+)
 
-REM Fallback to npm
-where npm >nul 2>&1
-if not errorlevel 1 goto :found_npm
-
-goto :not_found
-
-:found_pnpm
-echo    Using pnpm...
-call pnpm install
-call pnpm run tauri:dev
-goto :check_error
-
-:found_npm
-echo    Using npm...
-call npm install
-call npm run tauri:dev
-goto :check_error
-
-:not_found
-echo    ❌ Error: Node.js (npm or pnpm) is not installed or not in PATH.
-pause
-exit /b 1
-
-:check_error
 if errorlevel 1 (
     echo.
     echo ❌ Application exited with error.
