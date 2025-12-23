@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { ModelManager } from './WhisperModelManager';
 import { ParakeetModelManager } from './ParakeetModelManager';
+import { DiarizationSettings } from './DiarizationSettings';
 
 
 export interface TranscriptModelProps {
@@ -167,6 +168,11 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                                 autoSave={true}
                             />
                         </div>
+                    )}
+
+                    {/* Diarization Settings - Always visible or only for local models? */}
+                    {(transcriptModelConfig.provider === 'localWhisper' || transcriptModelConfig.provider === 'parakeet') && (
+                        <DiarizationSettings />
                     )}
 
 

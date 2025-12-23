@@ -27,4 +27,22 @@ impl DiarizationEngine {
         *self.model.write().await = Some(model);
         Ok(())
     }
+
+    pub async fn process_segment(&self, audio_samples: &[f32]) -> anyhow::Result<usize> {
+        let mut model_guard = self.model.write().await;
+        if let Some(model) = model_guard.as_mut() {
+            if audio_samples.len() < 200 {
+                 return Ok(0); // Too short
+            }
+
+            // Call extract_embedding directly on the model
+            let embedding = model.extract_embedding(audio_samples)?;
+
+            let mut clustering = self.clustering.write().await;
+            let speaker_id = clustering.process_segment(&embedding);
+            Ok(speaker_id)
+        } else {
+            Err(anyhow::anyhow!("Diarization model not loaded"))
+        }
+    }
 }
