@@ -282,28 +282,35 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ transcripts, isR
             className="mb-3"
           >
             <div className="flex items-start gap-2">
-              <Tooltip>
-                <TooltipTrigger>
-                  <span className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px]">
-                    {transcript.audio_start_time !== undefined
-                      ? formatRecordingTime(transcript.audio_start_time)
-                      : transcript.timestamp}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {transcript.duration !== undefined && (
-                    <span className="text-xs text-gray-400">
-                      {transcript.duration.toFixed(1)}s
-                      {transcript.confidence !== undefined && (
-                        <ConfidenceIndicator
-                          confidence={transcript.confidence}
-                          showIndicator={showConfidence}
-                        />
-                      )}
+              <div className="flex flex-col items-end min-w-[70px]">
+                {transcript.speaker_id && (
+                   <span className="text-xs font-bold text-blue-500 mb-0.5">
+                     {transcript.speaker_id}
+                   </span>
+                )}
+                <Tooltip>
+                  <TooltipTrigger>
+                    <span className="text-xs text-gray-400 mt-1 flex-shrink-0">
+                      {transcript.audio_start_time !== undefined
+                        ? formatRecordingTime(transcript.audio_start_time)
+                        : transcript.timestamp}
                     </span>
-                  )}
-                </TooltipContent>
-              </Tooltip>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {transcript.duration !== undefined && (
+                      <span className="text-xs text-gray-400">
+                        {transcript.duration.toFixed(1)}s
+                        {transcript.confidence !== undefined && (
+                          <ConfidenceIndicator
+                            confidence={transcript.confidence}
+                            showIndicator={showConfidence}
+                          />
+                        )}
+                      </span>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div className="flex-1">
                 {isStreaming ? (
                   // Streaming transcript - show in bubble (full width)
