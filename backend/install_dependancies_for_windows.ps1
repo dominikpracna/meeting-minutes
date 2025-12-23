@@ -102,6 +102,15 @@ try {
         Write-Host "Git is already installed"
     }
 
+    # Install Rust if not present
+    if (!(Get-Command cargo -ErrorAction SilentlyContinue)) {
+        Write-Host "Installing Rust..."
+        choco install rust -y
+        refreshenv
+    } else {
+        Write-Host "Rust is already installed"
+    }
+
     # Install CMake if not present
     if (!(Get-Command cmake -ErrorAction SilentlyContinue)) {
         Write-Host "Installing CMake..."

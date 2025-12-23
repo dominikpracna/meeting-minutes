@@ -13,7 +13,10 @@ where cargo >nul 2>&1
 if errorlevel 1 (
     echo.
     echo ❌ Error: Rust/Cargo is not installed or not in your PATH.
-    echo    Please install Rust from https://rustup.rs/
+    echo    You can try running the dependency installation script:
+    echo    powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
+    echo.
+    echo    Or install Rust manually from https://rustup.rs/
     echo    After installing, restart your terminal and try again.
     pause
     exit /b 1
