@@ -8,107 +8,114 @@ echo   Run Meetily
 echo ========================================
 echo.
 
+REM Trace execution
+echo [INFO] Checking for Cargo...
+
 REM Check if Rust/Cargo is installed
 where cargo >nul 2>&1
-if errorlevel 1 (
-    echo.
-    echo ❌ Rust/Cargo is NOT found in your PATH.
-    echo.
-    echo    Meetily requires Rust, Node.js, and other dependencies to run.
-    echo    We can attempt to install them automatically using a PowerShell script.
-    echo.
-    set /p "INSTALL_DEPS=Would you like to install dependencies now? (Y/N): "
+if not errorlevel 1 goto :cargo_found
 
-    if /i "%INSTALL_DEPS%"=="Y" (
-        echo.
-        echo    🚀 Launching dependency installer...
-        echo    (This requires Administrator privileges and may prompt for confirmation)
-        echo.
+REM Cargo not found handling
+echo.
+echo [ERROR] Rust/Cargo is NOT found in your PATH.
+echo.
+echo    Meetily requires Rust, Node.js, and other dependencies to run.
+echo    We can attempt to install them automatically using a PowerShell script.
+echo.
+set /p "INSTALL_DEPS=Would you like to install dependencies now? (Y/N): "
 
-        REM Run installer and capture exit code
-        set INSTALL_EXIT_CODE=0
-        if exist "backend\install_dependancies_for_windows.ps1" (
-            powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
-            set INSTALL_EXIT_CODE=%errorlevel%
-        ) else if exist "..\backend\install_dependancies_for_windows.ps1" (
-            powershell -ExecutionPolicy Bypass -File ..\backend\install_dependancies_for_windows.ps1
-            set INSTALL_EXIT_CODE=%errorlevel%
-        ) else (
-            echo    ❌ Could not find installer script at backend\install_dependancies_for_windows.ps1
-            pause
-            exit /b 1
-        )
+if /i "%INSTALL_DEPS%"=="Y" goto :install_deps
+goto :install_declined
 
-        if errorlevel 1 (
-            echo.
-            echo    ⚠️  Installation script encountered errors.
-            echo    Please review the error messages above.
-            echo    You may need to run the installer manually or fix issues (like file locks) and reboot.
-            echo.
-            echo    Command: powershell -ExecutionPolicy Bypass -File backend\install_dependancies_for_windows.ps1
-            pause
-            exit /b 1
-        )
+:install_deps
+echo.
+echo    [INFO] Launching dependency installer...
+echo    (This requires Administrator privileges and may prompt for confirmation)
+echo.
 
-        echo.
-        echo    ✅ Installation attempt finished.
-        echo    ⚠️  IMPORTANT: You MUST restart your terminal/CMD window now to refresh environment variables.
-        echo    Please close this window and run 'run.bat' again.
-        pause
-        exit /b 0
+REM Check script location
+if exist "backend\install_dependancies_for_windows.ps1" (
+    set "INSTALL_SCRIPT=backend\install_dependancies_for_windows.ps1"
+) else (
+    if exist "..\backend\install_dependancies_for_windows.ps1" (
+        set "INSTALL_SCRIPT=..\backend\install_dependancies_for_windows.ps1"
     ) else (
-        echo.
-        echo    ❌ Cannot proceed without Rust. Exiting.
+        echo    [ERROR] Could not find installer script.
         pause
         exit /b 1
     )
 )
 
-REM Check if we are in the root directory and need to move to frontend
-if exist "frontend\package.json" (
-    echo    Found frontend directory, switching...
-    cd frontend
-) else if not exist "package.json" (
-    echo    ❌ Error: Could not find package.json. Please run from the project root or frontend directory.
-    pause
-    exit /b 1
-)
+powershell -ExecutionPolicy Bypass -File "%INSTALL_SCRIPT%"
+if errorlevel 1 goto :install_failed
 
-REM Check if pnpm is installed
-where pnpm >nul 2>&1
-if not errorlevel 1 goto :found_pnpm
+echo.
+echo    [SUCCESS] Installation attempt finished.
+echo    [IMPORTANT] You MUST restart your terminal/CMD window now to refresh environment variables.
+echo    Please close this window and run 'run.bat' again.
+pause
+exit /b 0
 
-REM Fallback to npm
-where npm >nul 2>&1
-if not errorlevel 1 goto :found_npm
-
-goto :not_found
-
-:found_pnpm
-echo    Using pnpm...
-call pnpm install
-call pnpm run tauri:dev
-goto :check_error
-
-:found_npm
-echo    Using npm...
-call npm install
-call npm run tauri:dev
-goto :check_error
-
-:not_found
-echo    ❌ Error: Node.js (npm or pnpm) is not installed or not in PATH.
+:install_failed
+echo.
+echo    [ERROR] Installation script encountered errors.
+echo    Please review the messages above.
 pause
 exit /b 1
 
-:check_error
-if errorlevel 1 (
-    echo.
-    echo ❌ Application exited with error.
-    pause
-    exit /b 1
+:install_declined
+echo.
+echo    [ERROR] Cannot proceed without Rust. Exiting.
+pause
+exit /b 1
+
+:cargo_found
+echo [INFO] Cargo found.
+
+REM Check directories
+if exist "frontend\package.json" (
+    echo [INFO] Found frontend directory, switching...
+    cd frontend
+) else (
+    if not exist "package.json" (
+        echo [ERROR] Could not find package.json.
+        pause
+        exit /b 1
+    )
 )
 
+REM Check for pnpm/npm
+where pnpm >nul 2>&1
+if not errorlevel 1 goto :found_pnpm
+
+where npm >nul 2>&1
+if not errorlevel 1 goto :found_npm
+
+echo [ERROR] Node.js (npm or pnpm) is not installed or not in PATH.
+pause
+exit /b 1
+
+:found_pnpm
+echo [INFO] Using pnpm...
+call pnpm install
+call pnpm run tauri:dev
+if errorlevel 1 goto :app_error
+goto :success
+
+:found_npm
+echo [INFO] Using npm...
+call npm install
+call npm run tauri:dev
+if errorlevel 1 goto :app_error
+goto :success
+
+:app_error
 echo.
-echo ✅ Application stopped.
+echo [ERROR] Application exited with error.
+pause
+exit /b 1
+
+:success
+echo.
+echo [INFO] Application stopped.
 exit /b 0

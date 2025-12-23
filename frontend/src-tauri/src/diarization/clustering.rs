@@ -32,10 +32,6 @@ impl OnlineClustering {
         if let Some(id) = best_cluster {
             if max_sim >= self.threshold {
                 // Update centroid (simple moving average for online)
-                // Or just keep the centroid if it's representative.
-                // For simplicity, let's just return the ID.
-                // A better update would be: new_centroid = (old_centroid * N + new_emb) / (N + 1)
-                // But we don't track N here. Let's do a simple weighted update.
                 let centroid = self.clusters.get_mut(&id).unwrap();
                 for i in 0..centroid.len() {
                     centroid[i] = 0.9 * centroid[i] + 0.1 * embedding[i];
@@ -60,5 +56,43 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
         0.0
     } else {
         dot / (norm_a * norm_b)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cosine_similarity() {
+        let v1 = vec![1.0, 0.0, 0.0];
+        let v2 = vec![1.0, 0.0, 0.0];
+        assert!((cosine_similarity(&v1, &v2) - 1.0).abs() < 1e-6);
+
+        let v3 = vec![0.0, 1.0, 0.0];
+        assert!((cosine_similarity(&v1, &v3)).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_clustering_new_speaker() {
+        let mut clustering = OnlineClustering::new(0.5);
+        let emb1 = vec![1.0, 0.0];
+        let id1 = clustering.process_segment(&emb1);
+        assert_eq!(id1, 1);
+
+        let emb2 = vec![0.0, 1.0]; // Orthogonal, should be new speaker
+        let id2 = clustering.process_segment(&emb2);
+        assert_eq!(id2, 2);
+    }
+
+    #[test]
+    fn test_clustering_same_speaker() {
+        let mut clustering = OnlineClustering::new(0.5);
+        let emb1 = vec![1.0, 0.0];
+        let id1 = clustering.process_segment(&emb1);
+
+        let emb2 = vec![0.9, 0.1]; // Close enough
+        let id2 = clustering.process_segment(&emb2);
+        assert_eq!(id1, id2);
     }
 }
