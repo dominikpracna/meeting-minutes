@@ -16,21 +16,52 @@ try {
 
     # Check Python installation
     Write-Host "Checking Python installation..."
-    
-    # List of possible Python installation paths
-    $pythonPaths = @(
-        "C:\Program Files\Python311\python.exe",
-        "C:\Python311\python.exe",
-        "C:\Users\$env:USERNAME\AppData\Local\Programs\Python\Python311\python.exe",
-        "C:\ProgramData\chocolatey\bin\python.exe"
-    )
-    
+
     $pythonExe = $null
-    foreach ($path in $pythonPaths) {
-        if (Test-Path $path) {
-            $pythonExe = $path
-            Write-Host "Found Python at: $pythonExe"
-            break
+
+    # 1. First attempt: Check PATH for any valid Python 3.10+
+    try {
+        # Get python version. 2>&1 redirects stderr to stdout as some python versions/launchers use stderr
+        $pythonVersionOutput = python --version 2>&1 | Out-String
+        if ($LASTEXITCODE -eq 0 -and $pythonVersionOutput -match "Python (\d+)\.(\d+)") {
+             $major = [int]$matches[1]
+             $minor = [int]$matches[2]
+
+             # Accept Python 3.10 or newer (including 3.14+)
+             if ($major -eq 3 -and $minor -ge 10) {
+                 # Use python to report its own executable path to bypass shims (e.g. Windows Store shim)
+                 $resolvedPath = python -c "import sys; print(sys.executable)" 2>$null
+                 if ($resolvedPath) {
+                     $resolvedPath = $resolvedPath.Trim()
+                     if (Test-Path $resolvedPath) {
+                         $pythonExe = $resolvedPath
+                         Write-Host "Found Python $major.$minor in PATH at: $pythonExe"
+                     }
+                 }
+             } else {
+                 Write-Host "Found Python $major.$minor in PATH, but version 3.10+ is required."
+             }
+        }
+    } catch {
+        Write-Host "Python not found in PATH or error checking version."
+    }
+
+    # 2. Second attempt: Check specific hardcoded paths if not found in PATH
+    if ($pythonExe -eq $null) {
+        # List of possible Python installation paths
+        $pythonPaths = @(
+            "C:\Program Files\Python311\python.exe",
+            "C:\Python311\python.exe",
+            "C:\Users\$env:USERNAME\AppData\Local\Programs\Python\Python311\python.exe",
+            "C:\ProgramData\chocolatey\bin\python.exe"
+        )
+
+        foreach ($path in $pythonPaths) {
+            if (Test-Path $path) {
+                $pythonExe = $path
+                Write-Host "Found Python at: $pythonExe"
+                break
+            }
         }
     }
     
